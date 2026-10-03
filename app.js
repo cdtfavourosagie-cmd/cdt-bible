@@ -6,7 +6,7 @@ const cache={};let fb=null,db=null,au=null,dp=null;
 try{if(!/YOUR_/.test(C.FIREBASE.apiKey)){firebase.initializeApp(C.FIREBASE);au=firebase.auth();db=firebase.firestore();fb=1}}catch(e){}
 const ud=()=>db.collection('users').doc(S.user.uid);
 function el(t,a={},...k){const e=document.createElement(t);for(const[x,y]of Object.entries(a)){if(x==='class')e.className=y;else if(x.startsWith('on'))e[x]=y;else e.setAttribute(x,y)}k.flat().forEach(c=>{if(c!=null&&c!==false)e.append(c)});return e}
-const load=async id=>{if(!id)return null;if(cache[id])return cache[id];const r=await fetch('data/'+id+'.json');if(!r.ok)throw new Error('The Bible text file data/'+id+'.json was not found on the site. Upload the data folder to GitHub.');return cache[id]=await r.json()};
+const load=async id=>{if(!id)return null;if(cache[id])return cache[id];let r=await fetch(id+'.json');if(!r.ok||!/json/i.test(r.headers.get('content-type')||''))r=await fetch('data/'+id+'.json');if(!r.ok)throw new Error('The Bible text file '+id+'.json was not found on the site.');return cache[id]=await r.json()};
 const keyOf=(b,c,v)=>b+'.'+c+'.'+v,parse=k=>k.split('.').map(Number),cmp=(a,b)=>{const x=parse(a),y=parse(b);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2]};
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
 const savePos=()=>{try{localStorage.setItem('cdtpos',JSON.stringify({t:S.t,c:S.c,bk:S.bk,ch:S.ch,th:document.documentElement.dataset.theme||''}))}catch(e){}};
