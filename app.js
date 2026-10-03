@@ -6,7 +6,7 @@ const cache={};let fb=null,db=null,au=null,dp=null;
 try{if(!/YOUR_/.test(C.FIREBASE.apiKey)){firebase.initializeApp(C.FIREBASE);au=firebase.auth();db=firebase.firestore();fb=1}}catch(e){}
 const ud=()=>db.collection('users').doc(S.user.uid);
 function el(t,a={},...k){const e=document.createElement(t);for(const[x,y]of Object.entries(a)){if(x==='class')e.className=y;else if(x.startsWith('on'))e[x]=y;else e.setAttribute(x,y)}k.flat().forEach(c=>{if(c!=null&&c!==false)e.append(c)});return e}
-const load=async id=>id?cache[id]||(cache[id]=await fetch('data/'+id+'.json').then(r=>r.json())):null;
+const load=async id=>{if(!id)return null;if(cache[id])return cache[id];const r=await fetch('data/'+id+'.json');if(!r.ok)throw new Error('The Bible text file data/'+id+'.json was not found on the site. Upload the data folder to GitHub.');return cache[id]=await r.json()};
 const keyOf=(b,c,v)=>b+'.'+c+'.'+v,parse=k=>k.split('.').map(Number),cmp=(a,b)=>{const x=parse(a),y=parse(b);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2]};
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
 const savePos=()=>{try{localStorage.setItem('cdtpos',JSON.stringify({t:S.t,c:S.c,bk:S.bk,ch:S.ch,th:document.documentElement.dataset.theme||''}))}catch(e){}};
@@ -55,7 +55,7 @@ el('div',{class:'meta'},n.space+' · '+new Date(n.created).toLocaleDateString()+
 function edit(n,body){const ta=el('textarea',{style:'width:100%'});ta.value=n.body;body.replaceWith(el('div',{},ta,el('button',{class:'pri',onclick:async()=>{try{await ud().collection('notes').doc(n.id).update({body:ta.value});n.body=ta.value;render()}catch(e){toast(e.message)}}},'Save')))}
 async function del(n){if(!confirm('Delete this note?'))return;try{await ud().collection('notes').doc(n.id).delete();S.notes=S.notes.filter(x=>x!==n);render()}catch(e){toast(e.message)}}
 async function sync(){S.hl={};S.notes=[];if(S.user){try{const[h,n]=await Promise.all([ud().collection('highlights').get(),ud().collection('notes').orderBy('created','desc').get()]);h.forEach(d=>S.hl[d.id]=d.data().color);S.notes=n.docs.map(d=>({id:d.id,...d.data()}))}catch(e){toast(e.message)}}
-$('#acct').textContent=S.user?'Sign out':'Sign in';spaces();render()}
+$('#acct').textContent=S.user?'Sign out':'Sign in';spaces();try{await render()}catch(e){$('#m').replaceChildren(el('div',{class:'ban'},'Could not load the Bible text. '+e.message))}}
 const openAuth=()=>{if(!fb)return toast('Accounts are not set up yet');$('#am').textContent='';$('#auth').showModal()};
 async function authGo(up){const email=$('#em').value.trim(),pw=$('#pw').value,m=$('#am');m.textContent='Please wait…';try{up?await au.createUserWithEmailAndPassword(email,pw):await au.signInWithEmailAndPassword(email,pw);$('#auth').close()}catch(e){m.textContent=e.message}}
 $('#fp').onclick=async()=>{const e=$('#em').value.trim(),m=$('#am');if(!e)return m.textContent='Type your email first.';try{await au.sendPasswordResetEmail(e);m.textContent='Reset link sent. Check your email.'}catch(x){m.textContent=x.message}};
@@ -73,5 +73,7 @@ $('#ins').onclick=()=>dp?(dp.prompt(),dp=null):alert('To install: on iPhone tap 
 if(matchMedia('(display-mode: standalone)').matches)$('#ins').hidden=true;
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 (async()=>{try{const p=JSON.parse(localStorage.getItem('cdtpos')||'{}');if(p.th)document.documentElement.dataset.theme=p.th;Object.assign(S,{t:p.t||'kjv',c:p.c||'',bk:p.bk||0,ch:p.ch||1})}catch(e){}
-if(!LBL[S.t])S.t='kjv';if(!LBL[S.c])S.c='';fill();spaces();await chapters();await render();
-if(fb)au.onAuthStateChanged(u=>{S.user=u;setTimeout(sync,0)})})();
+if(!LBL[S.t])S.t='kjv';if(!LBL[S.c])S.c='';
+if(fb){try{await au.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}au.onAuthStateChanged(u=>{S.user=u;$('#acct').textContent=u?'Sign out':'Sign in';setTimeout(sync,0)})}
+fill();spaces();
+try{await chapters();await render()}catch(e){$('#m').replaceChildren(el('div',{class:'ban'},'Could not load the Bible text. '+e.message))}})();
